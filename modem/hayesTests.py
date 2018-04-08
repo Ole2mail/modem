@@ -8,79 +8,115 @@ from modem.hayes import hayes
 from modem.si24xx import si24xx
 
 import time
+from time import sleep
+from _curses import baudrate
 
-def simpleDialogWithModem():
-    port = hayes('/dev/ttyUSB0')
-    port.write("AT\r")
+def printHayesStates(modem):
+    print
+    print modem.stateCMD
+    print modem.stateLine
     
-    answer = port.read()
-    print answer
-    
-    port.close()
-    
+def printSi24xxStates(modem):
+    print
+    print modem.stateModem
+    print modem.stateVoiceAction
+    print modem.stateVoiceLine
+    print modem.stateVoiceParallel
+    print modem.stateVoiceDTMF
+
 def simpleAnswerFromModem():
     port = hayes('/dev/ttyUSB0', baudrate=230400) #115200)
+    printHayesStates(port)
     
-    answer = port.readAnswer("ATi6")
+    answer = port.readAnswer("i7")        
     print answer
-#     print port.stateCMDList
-    print port.stateCMD
-    print port.stateLine
+    printHayesStates(port)
+    
+    answer = port.readAnswer("ATi6")        
+    print answer
+    printHayesStates(port)
     
     port.close()
     
 def slowAnswerFromModem():
-    port = hayes.hayes('/dev/ttyUSB0')
+    port = hayes('/dev/ttyUSB0')
+    printHayesStates(port)
+    
+    answer = port.readAnswerDelayed("H", 1)        
+    print answer
+    printHayesStates(port)
     
     answer = port.readAnswerDelayed("ATA", 20)
     print answer
+    printHayesStates(port)
     
     port.close()
     
 def testVoiceInit():    
-    modem = si24xx('/dev/ttyUSB0')
-    modem.initModeVoice()
+    modem = si24xx('/dev/ttyUSB0', baudrate=230400)
+    printHayesStates(modem)
+    printSi24xxStates(modem)
     
-    print modem.stateVoice
+    modem.resetModem()
+    modem.initModeVoice()
+    modem.offhookModeVoice()
+    sleep(1)
+    printHayesStates(modem)
+    printSi24xxStates(modem)
     
     modem.close()
 
 def testVoiceStates():
     modem = si24xx('/dev/ttyUSB0')
-    time.sleep(1)
-    modem.hangupModeVoice()
-    time.sleep(1)
-    modem.resetMode()
-    time.sleep(1)
+    printHayesStates(modem)
+    printSi24xxStates(modem)
     
-    print modem.stateVoice
+    modem.resetModem()
+    modem.resetMode()
+    printHayesStates(modem)
+    printSi24xxStates(modem)
     
     modem.initModeVoice()
+    printHayesStates(modem)
+    printSi24xxStates(modem)
     
-    while modem.modemModeCurrent != modem.modemModes.VOICE:
+    print "waiting modem to enter VOICE mode"
+    while modem.stateModem != modem.mode.VOICE:
         time.sleep(0.1)
+    printHayesStates(modem)
+    printSi24xxStates(modem)
     
-    print modem.stateVoice
+    modem.offhookModeVoice()
+    printHayesStates(modem)
+    printSi24xxStates(modem)
     
-    while modem.stateVoice != modem.responseVoice.DIALTONE:
-        time.sleep(0.1)
+    print "waiting modem to detect DIAL TONE"
+    while modem.responseActionState != modem.responseVoice.DIALTONE:
+        printSi24xxStates(modem)
+        time.sleep(1)
+    printHayesStates(modem)
+    printSi24xxStates(modem)
     
     modem.dialModeVoice("1,0,4")
+    printHayesStates(modem)
+    printSi24xxStates(modem)
     
-    while modem.stateVoice != modem.responseVoice.RINGING:
+    print "waiting modem to detect RING-back"
+    while modem.responseActionState != modem.responseVoice.RINGING:
 #     while modem.stateVoice != modem.responseVoice.QUITE:
         time.sleep(0.1)
-        
-    print modem.stateVoice
+    printHayesStates(modem)
+    printSi24xxStates(modem)
     
     time.sleep(2)
-    
+
+    print "hanging-up the modem"    
     modem.hangupModeVoice()
-    time.sleep(1)
-    
-    print modem.stateVoice
+    printHayesStates(modem)
+    printSi24xxStates(modem)
     
     modem.resetMode()
-    time.sleep(1)
+    printHayesStates(modem)
+    printSi24xxStates(modem)
     
     modem.close()
